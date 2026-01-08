@@ -3,7 +3,7 @@
 
 ## 1. Motivation and positioning
 
-Recent trends in autonomous systems development show a strong movement toward end-to-end neural architectures, often framed as “Software 2.0”, where a single learned model maps observations directly to actions or low-level control. At the same time, situation awareness (SA) frameworks argue for an explicit decomposition of functionality into perception, comprehension, and projection, each with distinct semantics and responsibilities.
+Recent trends in autonomous systems development show a strong movement toward end-to-end neural architectures, often framed as *Software 2.0*, where a single learned model maps observations directly to actions or low-level control. At the same time, situation awareness (SA) frameworks argue for an explicit decomposition of functionality into perception, comprehension, and projection, each with distinct semantics and responsibilities.
 
 This document adopts a deliberately neutral, analytical stance. The goal is not to advocate for or against either paradigm, but to clarify what is gained and what is lost by each, using SA as a conceptual lens. The focus is on epistemic structure, operator factorization, robustness, and governance, rather than implementation convenience or historical convention.
 
@@ -11,13 +11,13 @@ The central claim is that the perceived conflict is not primarily about neural v
 
 ## 2. End-to-end learning as operator collapse
 
-An end-to-end autonomous system can be described as learning a single operator mapping observations to actions or controls. Formally, this operator can be written as:
+An end-to-end autonomous system can be described as learning a single operator that maps observations to actions or controls:
 
-$$
-\mathcal{A}_\theta : \mathcal{X} \rightarrow \mathcal{U}
-$$
+```
+A_theta : X -> U
+```
 
-Here, observations belong to the space $\mathcal{X}$ and actions or controls belong to the space $\mathcal{U}$. Training adjusts the parameters $\theta$ to minimize a task-level objective, typically defined over trajectories or datasets.
+Here, `X` denotes the observation space and `U` denotes the action or control space. Training adjusts the parameters `theta` to minimize a task-level objective, typically defined over trajectories or datasets.
 
 From a functional perspective, this collapses perception, interpretation, prediction, and decision-making into a single learned transformation. Any intermediate structure that emerges is a consequence of optimization pressure, not architectural commitment. Internal representations may correlate with concepts such as objects, state, or intent, but these correlations are neither guaranteed nor uniquely identifiable.
 
@@ -29,9 +29,15 @@ However, the collapse has a structural consequence: epistemic interfaces disappe
 
 A situation awareness framework starts from a different premise. It assumes that transforming observations into actions involves semantically distinct stages, typically described as perception, comprehension, and projection. In operator form, this corresponds to a factorization of the overall agent:
 
-$$
-\mathcal{A} \approx \pi \circ \ell_P \circ \ell_C \circ \ell_S
-$$
+```
+A ≈ pi ∘ l_P ∘ l_C ∘ l_S
+```
+
+Here:
+- `l_S` denotes perception,
+- `l_C` denotes comprehension,
+- `l_P` denotes projection,
+- `pi` denotes decision or policy selection.
 
 Each operator maps between spaces with intended meaning. Perception extracts task-relevant concepts from observations, comprehension organizes those concepts into a coherent internal model, and projection anticipates future states under uncertainty and intent.
 
