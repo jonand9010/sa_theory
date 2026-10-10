@@ -1,137 +1,100 @@
 # Situation Awareness Operator
 
-This repository defines a structured, operator-based framework for **situation awareness (SA)** in engineered systems. The framework separates sensing, interpretation, and relevance into three explicit operators: **Perception**, **Comprehension**, and **Projection**.
+A structured framework for defining and analyzing situation awareness in engineered systems.
 
-The purpose of this repository is to provide a clear, rigorous, and implementation-agnostic definition of situation awareness that supports system design, analysis, and comparison without embedding assumptions about control, planning, or optimization.
+## Quick start
 
----
+This repository defines situation awareness as a goal-conditioned transformation from observations to a goal-relevant internal representation:
 
-## 1. Overview
+SA_g = R_g ∘ C ∘ P
 
-Situation awareness is treated here as a **first-class system capability**, not as a by-product of estimation or decision-making.
+Where:
 
-The central idea is that a system’s internal understanding of its environment is constructed in stages:
+- P = Perception: transforms raw observations into semantic concepts
+- C = Comprehension: integrates concepts into an internal situation model
+- R_g = Projection: reduces that model to a goal-relevant representation
 
-1. Raw observations are transformed into semantic concepts  
-2. Concepts are integrated into a coherent situation representation  
-3. The situation representation is reduced to a goal-relevant form  
+The framework is intended to make implicit abstraction steps explicit, so systems can be compared, analyzed, and audited more clearly.
 
-These stages are made explicit through an operator-based formulation.
+## Why this repository exists
 
----
+Situation awareness is often discussed informally, but it is rarely defined with enough precision to support system design and analysis. This repository addresses that gap by separating three distinct functions:
 
-## 2. Situation Awareness Operator
+1. What is detected?
+2. What situation is believed to exist?
+3. What matters given the goal?
 
-Situation awareness for a given goal or operational context g is defined as the composition:
+This separation helps distinguish sensing failures, explanation failures, and relevance failures.
 
-    SA_g = R_g ∘ C ∘ P
+## What this framework is
 
-where:
+- a representational architecture for SA
+- a conceptual tool for system analysis
+- a way to reason about goals, abstraction, and relevance
+- a basis for comparing design alternatives
 
-- P is the **Perception operator**
-- C is the **Comprehension operator**
-- R_g is the **Projection operator**, parameterized by the goal g
+## What this framework is not
 
-At time t, the operator acts on the observation history y_{≤t}. Each operator has a distinct responsibility and a well-defined interface.
+- not a control algorithm
+- not a planning method
+- not a model of human cognition
+- not a substitute for domain-specific safety analysis
 
----
+## Core documents
 
-## 3. Perception Operator
+This repo is organized around a small set of documents:
 
-The perception operator is responsible for transforming raw observations into **semantic concepts**.
+- README.md — high-level overview and navigation
+- sa_operator.md — formal operator definition
+- design_principle.md — rationale and design principles
+- analysis_guidelines.md — how to analyze a real system with this framework
+- notations.md — notation and naming conventions
+- limitations.md — scope and intentional boundaries
+- perception_operator.md — perception operator specification
+- comprehension_operator.md — comprehension operator specification
+- projection_operator.md — projection operator specification
+- projection_patterns.md — common projection patterns
+- sa_architecture_and_sw_2_0.md — broader architectural framing
 
-It answers the question:
+## Repository map
 
-What has been detected or observed?
+- Overview and theory
+  - README.md
+  - sa_operator.md
+  - design_principle.md
+- Formal specification
+  - perception_operator.md
+  - comprehension_operator.md
+  - projection_operator.md
+  - notations.md
+- Analysis and use
+  - analysis_guidelines.md
+  - projection_patterns.md
+  - sa_architecture_and_sw_2_0.md
+- Boundaries and scope
+  - limitations.md
 
-Perception operates directly on sensor data and produces elements such as detected objects, events, signals, attributes, or relations. It does not attempt to explain, interpret, or predict. Any uncertainty or noise in detection is propagated forward.
+## Typical analysis flow
 
-Perception is **independent of goals or operational context**.
+When applying this framework to a system, the usual steps are:
 
-A detailed specification is provided in `perception_operator.md`.
+1. Identify the observation inputs
+2. Identify the perception outputs
+3. Identify the internal situation model
+4. Identify the projection boundary
+5. Describe the goal-conditioned representation
+6. Check whether downstream components are using the projected representation correctly
 
----
+## Suggested next reading order
 
-## 4. Comprehension Operator
+For a first-time reader:
 
-The comprehension operator integrates detected concepts into a **coherent internal situation representation**.
+1. README.md
+2. sa_operator.md
+3. design_principle.md
+4. analysis_guidelines.md
+5. projection_operator.md
 
-It answers the question:
+## Summary
 
-What situation might be occurring, given what has been observed?
-
-Comprehension introduces structure, consistency, and temporal coherence. It may represent latent modes, causal hypotheses, trends, and uncertainty. Comprehension remains descriptive and does not evaluate relevance or prescribe behavior.
-
-Comprehension is **independent of goals**.
-
-A detailed specification is provided in `comprehension_operator.md`.
-
----
-
-## 5. Projection Operator
-
-The projection operator reduces the internal situation representation to a **goal-relevant representation**.
-
-It answers the question:
-
-Which aspects of the situation matter under the current goal or responsibility?
-
-Projection is the first stage where intent enters the situation awareness pipeline. It does not perform planning, control, or optimization. Instead, it shapes the form of the situation representation by preserving distinctions that matter for the goal and discarding those that do not.
-
-The goal g materializes entirely in the structure of the projected representation.
-
-A detailed specification is provided in `projection_operator.md`.
-
----
-
-## 6. Separation of Responsibilities
-
-The three operators serve distinct purposes:
-
-- Perception determines what is detected
-- Comprehension determines what situation is believed
-- Projection determines what is relevant for the goal
-
-This separation avoids conflating sensing quality, interpretation, and relevance, and enables clearer reasoning about system behavior and failure modes.
-
----
-
-## 7. Design Intent
-
-This framework is intended to:
-
-- make implicit abstraction steps explicit
-- support architectural reasoning and system comparison
-- improve transparency and testability
-- remain compatible with diverse implementation approaches
-- avoid embedding control or optimization assumptions
-
-Situation awareness is treated as a representational process that prepares information for downstream use, not as a decision-making mechanism itself.
-
----
-
-## 8. Repository Structure
-
-The repository is organized as follows:
-
-- `README.md`  
-  High-level introduction to the situation awareness framework
-
-- `perception_operator.md`  
-  Formal definition of the perception operator
-
-- `comprehension_operator.md`  
-  Formal definition of the comprehension operator
-
-- `projection_operator.md`  
-  Formal definition of the projection operator
-
-Additional documents may be added to cover examples, notation, or domain-specific adaptations.
-
----
-
-## 9. Summary
-
-Situation awareness is defined as a structured transformation from observations to a goal-relevant internal situation representation. By decomposing this transformation into perception, comprehension, and projection operators, the framework provides a clear and rigorous foundation for designing and analyzing situation-aware systems.
-
-This repository serves as a reference specification for that foundation.
+This repository is a conceptual specification for situation awareness as a structured system capability. Its main value is in making the representation pipeline explicit, inspectable, and reusable across system designs.
