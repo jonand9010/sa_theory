@@ -1,0 +1,47 @@
+theme: jekyll-theme-minimal
+title: Situation Awareness Operator
+description: A structured framework for defining and analyzing situation awareness in engineered systems
+show_downloads: false
+github:
+  is_project_page: false
+
+# Custom navigation
+nav_sections:
+  - title: "Getting Started"
+    items:
+      - name: "Home"
+        url: "/"
+      - name: "Quick Start & Map"
+        url: "/README.html"
+  
+  - title: "Theory & Foundation"
+    items:
+      - name: "Formal Operator Definition"
+        url: "/sa_operator.html"
+      - name: "Design Principles"
+        url: "/design_principle.html"
+      - name: "Notation & Conventions"
+        url: "/notations.html"
+  
+  - title: "Specification"
+    items:
+      - name: "Perception Operator"
+        url: "/perception_operator.html"
+      - name: "Comprehension Operator"
+        url: "/comprehension_operator.html"
+      - name: "Projection Operator"
+        url: "/projection_operator.html"
+      - name: "Projection Patterns"
+        url: "/projection_patterns.html"
+  
+  - title: "Analysis & Application"
+    items:
+      - name: "Analysis Guidelines"
+        url: "/analysis_guidelines.html"
+      - name: "SA Architecture & SW 2.0"
+        url: "/sa_architecture_and_sw_2_0.html"
+  
+  - title: "Reference"
+    items:
+      - name: "Limitations & Scope"
+        url: "/limitations.html"
