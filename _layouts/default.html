@@ -1,0 +1,43 @@
+---
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.title | default: site.title }}</title>
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <a href="{{ '/' | relative_url }}">{{ site.title }}</a>
+        </div>
+
+        {% for section in site.nav_sections %}
+          <div class="nav-section">
+            <h3>{{ section.title }}</h3>
+            <ul>
+              {% for item in section.items %}
+                <li>
+                  <a href="{{ item.url | relative_url }}">{{ item.name }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </aside>
+
+      <main class="content">
+        <header class="page-header">
+          <h1>{{ page.title | default: site.title }}</h1>
+        </header>
+
+        <article class="markdown-body">
+          {{ content }}
+        </article>
+      </main>
+    </div>
+  </body>
+</html>
