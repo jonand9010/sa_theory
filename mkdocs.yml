@@ -1,0 +1,41 @@
+site_name: Situation Awareness Operator
+site_description: A structured framework for defining and analyzing situation awareness in engineered systems
+site_url: https://jonand9010.github.io/sa_theory/
+repo_url: https://github.com/jonand9010/sa_theory
+repo_name: sa_theory
+
+nav:
+  - Home: index.md
+  - Getting Started: README.md
+  - Formal Definition: sa_operator.md
+  - Design Principles: design_principle.md
+  - Perception: perception_operator.md
+  - Comprehension: comprehension_operator.md
+  - Projection: projection_operator.md
+  - Notation: notations.md
+  - Analysis: analysis_guidelines.md
+  - Limitations: limitations.md
+  - Architecture: sa_architecture_and_sw_2_0.md
+  - Projection Patterns: projection_patterns.md
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search
