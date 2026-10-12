@@ -1,160 +1,86 @@
 # The Projection Operator in Situation Awareness Systems
 
-Version: 1.2  
-Status: Technical specification  
+Version: 1.3
+Status: Technical specification
 
----
+## 1. Role
 
-## 1. Introduction
+Projection answers: **Which representation of the current situation belief is relevant for this goal?** It exposes selected distinctions and summaries for downstream use.
 
-Situation awareness (SA) is commonly cited as a critical capability of engineered systems operating in dynamic and uncertain environments. However, the mechanisms by which internal situation representations are reduced, abstracted, or made relevant for specific purposes are often left implicit.
+Projection does not update the underlying belief, select actions, or introduce new observational evidence. Here, *projection* means goal-conditioned representation rather than necessarily forecasting.
 
-This document introduces the projection operator as a distinct and explicit component of situation awareness. The projection operator formalizes how a rich internal situation representation is transformed into a reduced, goal-relevant representation suitable for downstream system functions.
+## 2. Canonical Interface
 
-The intent is to define the projection operator in a manner that is rigorous, implementation-agnostic, and compatible with a wide range of system architectures.
+Using the conventions in [notations.md](notations.md):
 
----
+```text
+R_g : Prob(S) → U_g
+u_{g,t} = R_g(b_t)
+```
 
-## 2. Position Within the Situation Awareness Framework
+The goal `g` determines the output space `U_g` and the mapping. Outputs may be distributions, event probabilities, risk scores, margins, categories, or structured records. Their types and meanings must be declared.
 
-Situation awareness is defined as the composition of three operators:
+Perception and comprehension are held fixed across goals in the reference architecture. Goal-dependent sensing or inference requires an extension, not merely a different projection.
 
-    SA_g = R_g ∘ C ∘ P
+## 3. Distribution-Preserving Abstraction
 
-where:
+A measurable state abstraction `φ_g : S → V_g` groups situations according to relevance. Lift it to beliefs by taking the pushforward:
 
-- P denotes the perception operator
-- C denotes the comprehension operator
-- R_g denotes the projection operator, parameterized by a goal or operational context g
+```text
+U_g = Prob(V_g)
+R_g(b)(A) = b(φ_g⁻¹(A))
+```
 
-The perception and comprehension operators construct an internal representation of the environment. The projection operator transforms this representation according to relevance. Only the projection operator depends on the goal parameter g.
+for measurable `A ⊆ V_g`. In a finite situation space:
 
----
+```text
+R_g(b)(v) = ∑_{s: φ_g(s)=v} b(s)
+```
 
-## 3. Motivation for an Explicit Projection Operator
+Thus a belief of 0.60 normal, 0.30 overheating without fire, and 0.10 fire maps to 0.60 normal and 0.40 abnormal when both fault states are grouped together.
 
-The internal situation representation produced by comprehension is typically high-dimensional and structurally rich. While such representations are necessary for explanatory power and uncertainty management, they are often unsuitable for direct use by downstream components such as control logic, supervisory functions, or human–machine interfaces.
+This is aggregation, not preference-based reweighting. Severe consequences do not increase the probability of the corresponding state.
 
-Practical systems therefore employ abstraction, aggregation, and simplification mechanisms. When these mechanisms are implicit, it becomes difficult to reason about system behavior, diagnose failures, or compare alternative designs.
+## 4. Summaries of a Belief
 
-The projection operator is introduced to make this reduction step explicit and formally defined.
+Not every useful output is a distribution over abstract states. Examples include:
 
----
+| Output | Definition or construction | Interpretation |
+| --- | --- | --- |
+| Event probability | `b(E_g)` for a specified event `E_g ⊆ S` | Probability, in `[0, 1]` |
+| Expected severity | `∫ ℓ_g(s) b(ds)` for integrable severity `ℓ_g` | Score in the units of `ℓ_g` |
+| Margin quantile | Quantile of a specified margin under `b` | Margin with a stated quantile level |
+| Conservative bound | Extremum over a declared uncertainty set | Bound conditional on that set |
+| Display category | A declared mapping of belief quantities | Category with an explicit rule |
 
-## 4. Role of the Projection Operator
+A score is not a probability merely because it lies in `[0, 1]`. A bound is not automatically calibrated, and a category does not convey uncertainty unless its contract includes it.
 
-The projection operator determines which aspects of the internal situation representation are retained and how they are represented for a given goal.
+Conservative summaries must specify their uncertainty set or probability coverage. A worst case over the entire support can be uninformative, especially for distributions with unbounded support.
 
-It answers the question:
+## 5. Projection Contract
 
-Which distinctions in the internal situation representation are relevant under the current goal or operational context?
+For each `R_g`, document:
 
-The projection operator does not determine actions, optimize performance, or modify the underlying belief about the environment. Its role is limited to shaping the form of the situation representation.
+1. The goal and intended consumer.
+2. The input situation space and belief assumptions.
+3. The output type, units, and meaning of each field.
+4. The mapping, thresholds, quantile levels, and other parameters.
+5. The distinctions discarded and uncertainty retained or omitted.
+6. Update timing, validity conditions, and behavior for missing or stale inputs.
+7. Evidence that the output supports the intended downstream use.
 
----
+A label such as `fire_probability` states a quantity. A command such as `shut_down_now` selects an action and belongs downstream. Mode eligibility can be represented here; choosing or activating a mode belongs to decision logic.
 
-## 5. Goal as a Parameter of Projection
+## 6. Adequacy and Information Loss
 
-In this framework, a goal is treated as a parameter that specifies relevance rather than behavior.
+A deterministic projection cannot recover distinctions lost upstream. Reduction may also discard information its consumer needs.
 
-A goal may correspond to, for example:
+A practical check is to find beliefs `b_1` and `b_2` for which `R_g(b_1) = R_g(b_2)`. If the intended consumer needs to treat them differently, the projection is inadequate for that use. This check needs an explicit downstream requirement; a goal name alone does not establish sufficiency.
 
-- a safety requirement
-- an optimization objective
-- an operational mode
-- a diagnostic or monitoring intent
-- a regulatory or responsibility constraint
+For example, beliefs `(normal=0.6, overheating=0.4, fire=0)` and `(normal=0.6, overheating=0, fire=0.4)` both produce `Pr(abnormal)=0.4`. That output cannot support a response that distinguishes fire from overheating.
 
-The goal does not appear as an additional state variable. Instead, it parameterizes the projection operator by determining how the internal situation representation is reduced.
+## 7. Goal Changes and Implementation
 
----
+Changing goals can reuse upstream components when their representation supports the new projection. An implementation may use aggregation, rules, learned summaries, or other mechanisms, but it must satisfy the declared contract.
 
-## 6. Formal Definition
-
-Let S denote the internal situation space produced by the comprehension operator.
-
-Let U_g denote a goal-relevant situation representation space.  
-U_g is a representation space determined by the goal and is generally not a subset of S. Its elements need not correspond to situations in the descriptive sense; they may represent abstractions such as risk categories, margins, scores, or modes.
-
-The projection operator is defined as a goal-parameterized mapping:
-
-    R_g : S → U_g
-
-Equivalently, projection may be expressed as a function:
-
-    φ_g : S → U_g
-
-such that:
-
-    R_g(s) = φ_g(s)
-
-The goal g determines both the structure of U_g and the form of φ_g.
-
----
-
-## 7. Structure of the Projected Representation Space
-
-The structure of the projected representation space U_g constitutes the operational meaning of the goal.
-
-Typical forms of U_g include:
-
-- finite sets of situation or risk categories
-- scalar or vector-valued indicators
-- constraint margins or safety buffers
-- discrete operational or supervisory modes
-- reduced feature representations for downstream processing
-
-The projected representation is intentionally simpler and more compact than the full situation representation.
-
----
-
-## 8. Properties of the Projection Operator
-
-The projection operator may perform operations such as:
-
-- dimensionality reduction
-- aggregation of variables
-- discretization or classification
-- reduction of resolution or precision
-- extraction of conservative or worst-case summaries
-
-The projection operator does not:
-
-- alter the underlying situation hypotheses
-- perform planning or control
-- resolve trade-offs between competing goals
-- introduce new information
-
-Its function is purely representational.
-
----
-
-## 9. Goal Dependence and System Flexibility
-
-Because the goal parameter affects only the projection operator, a system may reuse the same perception and comprehension components across different goals or operational contexts.
-
-Changing the goal corresponds to selecting or reparameterizing the projection operator, while leaving the upstream components unchanged.
-
-This separation supports modularity, reuse, and systematic analysis of system behavior under varying responsibilities.
-
----
-
-## 10. Implementation Considerations
-
-From an implementation perspective, the projection operator can be realized using standard mechanisms such as:
-
-- feature selection
-- thresholding
-- classification
-- aggregation
-- rule-based abstraction
-
-The framework imposes no constraints on implementation techniques, only on the role and interface of the projection operator.
-
----
-
-## 11. Summary
-
-The projection operator is the component of situation awareness that formalizes relevance. It maps a rich internal situation representation to a goal-relevant representation space by preserving distinctions that matter under the current operational context and discarding those that do not.
-
-By explicitly separating projection from perception and comprehension, the situation awareness framework enables clearer system design, analysis, and comparison without introducing unnecessary complexity.
+Neither modularity nor an explicit formula guarantees calibration, stability, robustness, or safety. Those properties require validation in the operating domain.
