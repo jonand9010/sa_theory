@@ -1,4 +1,4 @@
-Situation Awareness as a Goal-Conditioned System Operator
+# Situation Awareness as a Goal-Conditioned System Operator
 
 A formal blueprint for designing and analyzing engineered systems
 
