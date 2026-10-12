@@ -1,191 +1,120 @@
-# Situation Awareness as a Goal-Conditioned System Operator  
-*A formal blueprint for designing, evaluating, and governing intelligent systems*
+Situation Awareness as a Goal-Conditioned System Operator
 
-**Version:** 1.0  
-**Date:** 2026-01-07  
+A formal blueprint for designing and analyzing engineered systems
 
----
+Version: 1.1
 
-## Abstract
+Abstract
 
-Situation awareness is frequently invoked in the design of intelligent and autonomous systems, yet rarely defined with sufficient formal precision to support architectural reasoning, system comparison, or regulatory dialogue. This document introduces a goal-conditioned, operator-based definition of situation awareness that separates perception, comprehension, and relevance by construction.
+This framework defines situation awareness (SA) as a transformation from observation history to a goal-relevant representation. It separates perception, comprehension, and projection so that detection, interpretation, and relevance can be inspected independently.
 
-Situation awareness is defined not as a property of the environment nor as an approximation of the physical system state, but as a structured internal representation optimized for goal-dependent decision support under uncertainty. The formulation is implementation-agnostic and domain-independent, enabling consistent reasoning across sensing modalities, algorithmic paradigms, and application contexts.
+Comprehension constructs a belief over internal situations. Projection exposes a goal-dependent representation of that belief without changing the underlying evidence. The formulation specifies interfaces and responsibilities; it does not guarantee accurate inference, sufficient abstraction, or safe decisions.
 
----
+1. Scope
 
-## 1. Scope and Delimitation
+The framework concerns engineered systems that observe and interpret dynamic environments. It is a representational architecture, not a control algorithm, planning method, or model of human cognition.
 
-This document defines situation awareness (SA) as a system-level construct for engineered systems that observe, interpret, and act in dynamic environments. The intent is to support architectural reasoning, system comparison, and technical governance of intelligent systems.
+An internal situation may describe latent operating modes, faults, relationships, or future outcomes. It need not reconstruct the full physical state. A state estimator can supply comprehension when its representation serves the intended use. Separating goal-dependent representation is the architectural choice emphasized here.
 
-The scope explicitly excludes organizational maturity models, process standards, and human cognitive modeling beyond abstract analogy. Situation awareness is not treated as a synonym for data availability, sensor fusion, state estimation, or predictive modeling. The artefact is implementation-agnostic: it constrains structure and responsibilities, not algorithms.
+2. Spaces and Assumptions
 
----
+Let Y be the observation space, Z the semantic concept record space, S the internal situation space, and G the goal space. At discrete time t, y_{≤t} and z_{≤t} denote observation and concept histories.
 
-## 2. Fundamental Spaces and Assumptions
+Prob(S) denotes probability measures over S. The situation belief is b_t ∈ Prob(S). The goal-relevant output is u_{g,t} ∈ U_g; U_g can contain distributions, scores, margins, categories, or structured records.
 
-Let:
+The reference architecture assumes that perception and comprehension can be held fixed for the goals being considered. Goal dependence is localized to projection. This supports reuse and comparison, but goal-dependent sensing and inference require an extension.
 
-- `X` denote the true (generally unobservable) world or plant state  
-- `Y` denote the system’s observations  
-- `S` denote the internal situationspace  
-- `G` denote the space of goals or objectives  
+See notations.md for the shared conventions.
 
-At time `t`:
+3. Operator Definition and Composition
 
-- the world state is `x_t ∈ X`  
-- the observation is `y_t ∈ Y`  
-- the internal situation representation is `ŝ_t ∈ S`  
-- the active goal is `g ∈ G`  
+At time t:
 
-Observations may be partial, noisy, delayed, heterogeneous, and not semantically meaningful by themselves. The internal situationspace `S` is not required to be isomorphic to the physical state space `X`.
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
+SA_g : Y^{≤t} → U_g
 
-A central assumption of this work is that situation awareness is not goal-independent. Any internal representation that supports action necessarily reflects a projection induced by the system’s objective.
+SA_g(y_{≤t}) = R_g(C(P(y_{≤t})))
 
----
+The output space of each operator matches the input space of the next. SA is not necessarily a distribution: comprehension produces a belief, while projection’s output type depends on its declared contract.
 
-## 3. The Situation Awareness Operator
+The decomposition is functional, not a requirement for three software modules. A fused implementation requires evidence that these responsibilities can be identified; merely writing a factorization does not make intermediate representations inspectable.
 
-Situation awareness is defined as a goal-conditioned operator mapping the observation history to a probability distribution over situations.
+4. Perception: Detecting Concepts
 
-Definition:
+Perception transforms observation history into semantic record history. Records can include entities, events, attributes, timestamps, confidence information, and missing-data flags.
 
-    SA_g : Y^{≤t} -> P(S)
+Perception answers: What has been observed or detected? It does not rank situations by consequence. Semantic detection still involves modeling assumptions; goal independence does not imply an assumption-free representation.
 
-where:
+Compression can discard information needed later. Goals can share perception only if its outputs retain the information their comprehension and projection require.
 
-- `Y^{≤t}` is the history of observations up to time `t`  
-- `P(S)` denotes a probability distribution over situations  
-- the subscript `g` indicates dependence on the system’s goal  
+5. Comprehension: Constructing a Belief
 
-Situation awareness is therefore not a point estimate, but a structured belief over the situationspace. Uncertainty is explicit and preserved by construction.
+Comprehension integrates concepts into a situation belief:
 
----
+b_t = C(z_{≤t})
 
-## 4. Operator Decomposition
+A probabilistic model may express this as b_t(ds) = Pr(s_t ∈ ds | z_{≤t}, M), where M denotes the model and its assumptions. Writing a distribution does not ensure calibration or correctness.
 
-The situation awareness operator is decomposed into three conceptually distinct roles:
+Comprehension can include explanatory hypotheses and temporal dynamics. Prediction belongs here when future outcomes are explicitly modeled as part of S. It does not change probabilities because one outcome is more desirable.
 
-    SA_g = R_g ∘ C ∘ P
+6. Projection: Exposing Relevance
 
-where:
+Projection produces a representation for a specified goal:
 
-- `P` is the perception operator  
-- `C` is the comprehension operator  
-- `R_g` is the goal-conditioned relevance operator  
+u_{g,t} = R_g(b_t)
 
-This decomposition is conceptual rather than algorithmic. An implementation may internally intertwine these operations, but the functional responsibilities remain distinct.
+Two useful forms are:
 
----
+1. Distribution over an abstraction. A mapping φ_g : S → V_g groups situations. R_g adds the probability mass in each group, producing an element of Prob(V_g).
+2. Summary of a belief. R_g reports event probabilities, expected severity, margin quantiles, or other quantities. The output contract specifies units, assumptions, and interpretation.
 
-## 5. Perception as Concept Detection
+Projection can emphasize a severe outcome by exposing its probability and consequence together. It must not present a preference-weighted score as an updated probability. Action thresholds and trade-offs belong to downstream decision logic.
 
-Perception maps raw observations to a space of semantic concepts.
+Reduction is a design intention, not a guarantee of adequacy. Whether the output preserves enough information depends on downstream use. See projection_operator.md.
 
-Definition:
+7. Worked Example: One Belief, Two Goals
 
-    P : Y^{≤t} -> Z
+An industrial system detects elevated temperature, active machinery, and smoke indicators. For illustration, comprehension uses three mutually exclusive modeled situations:
 
-where `Z` is a concept space containing entities such as objects, events, attributes, or relations.
+|Situation               |Belief probability|
+|------------------------|-----------------:|
+|Normal operation        |0.60              |
+|Overheating without fire|0.30              |
+|Fire present            |0.10              |
 
-Perception performs semantic compression. It transforms uninterpreted signals into structured descriptors. Perception does not reason about meaning, causality, or consequences. It answers only:
+The probabilities sum to one. If overheating and fire overlap in the application, the situation space needs joint states instead of treating those labels as exclusive.
 
-> What appears to be present?
+Safety monitoring: choose V_safety = {fire, no_fire}. Map fire present to fire and the other situations to no_fire:
 
-Signal processing, classical detection theory, and deep learning models all naturally belong to this layer. Perception is goal-agnostic by construction.
+Pr(fire) = 0.10
+Pr(no_fire) = 0.90
 
----
+Equipment condition monitoring: choose V_condition = {normal, abnormal}. Map overheating and fire to abnormal:
 
-## 6. Comprehension as Situational Modeling
+Pr(normal) = 0.60
+Pr(abnormal) = 0.40
 
-Comprehension integrates perceived concepts into a coherent internal situation model.
+The goals expose different distinctions while preserving the underlying belief. A safety policy might intervene at a fire probability of 0.10 because consequences are severe. That intervention is a downstream choice; it does not make fire more probable.
 
-Definition:
+Neither projection is sufficient for every purpose. The condition output cannot distinguish fire from overheating; a fire-specific response requires a richer output.
 
-    C : Z^{≤t} -> P(S)
+8. Design and Analysis Implications
 
-Comprehension produces a probability distribution over latent situations, encoding hypotheses about context, causality, and dynamics. Formally:
+The decomposition gives separate review questions:
 
-    p(s_t | z_{≤t}) = C(z_{≤t})
+• Does perception detect necessary concepts and expose missing or unreliable evidence?
+• Does comprehension support and calibrate its hypotheses?
+• Does projection retain the distinctions its consumers require?
+• Do consumers interpret projected quantities according to their declared meaning?
 
-Comprehension is inherently model-based, whether the model is explicit, learned, or hybrid. It is not prediction unless future outcomes are explicitly elements of the situationspace.
+These questions organize evidence. They do not establish accuracy, robustness, or safety by themselves.
 
----
+9. Boundaries and Related Formulations
 
-## 7. Relevance and Goal Conditioning
+The framework does not specify a universal situation space, inference algorithm, goal-selection method, or loss function. Those choices remain domain-specific.
 
-Relevance projects the internal situation distribution onto a goal-relevant situationspace.
+Belief construction can use techniques from state estimation or partially observable decision models. The decomposition makes a goal-conditioned representation boundary explicit; it is not a claim of incompatibility with those methods or proof of theoretical novelty.
 
-Definition:
-
-    R_g : P(S) -> P(S_g)
-
-This operator removes distinctions that do not affect decisions under the specified goal while preserving uncertainty that matters. It enforces informational parsimony.
-
-This step differentiates situation awareness from state estimation. Two systems with identical perception and comprehension may — and in general must — arrive at different situation awareness when their goals differ.
-
----
-
-## 8. Minimal Worked Example
-
-Consider an industrial monitoring system observing temperature, machine activity, and airborne particles.
-
-Perception identifies:
-
-- elevated temperature  
-- active machinery  
-- weak smoke indicators  
-
-Comprehension maps these concepts to a probabilistic situation model involving:
-
-- normal operation  
-- overheating  
-- fire risk  
-
-At this stage, the system maintains an uncertainty-aware internal description of what may be the case, but has not yet determined what matters for action.
-
----
-
-## 9. Divergent Situation Awareness under Identical Observations
-
-Consider two systems sharing identical sensors, perception, and comprehension. Both infer the same situation distribution:
-
-- 60% normal operation  
-- 30% overheating  
-- 10% fire risk  
-
-A safety-critical system aims to minimize catastrophic outcomes. Its relevance operator emphasizes low-probability, high-impact situations, yielding a situation awareness dominated by fire risk.
-
-A production-oriented system aims to maximize uptime. Its relevance operator suppresses rare catastrophic events below a decision threshold, yielding a situation awareness dominated by continued operation.
-
-Both systems are rational and consistent. Their situation awareness differs because situation awareness is a property of the system–goal pair, not of the environment alone.
-
----
-
-## 10. Design and Analysis Implications
-
-This operator-based formulation enables architectural reasoning without commitment to specific algorithms. Apparent perception failures may be diagnosed as relevance mismatches.
-
-System comparisons can be grounded in how situation awareness is constructed and maintained rather than solely in end-to-end performance metrics.
-
----
-
-## 11. Limitations and Intentional Non-Choices
-
-This artefact does not prescribe how operators are implemented, learned, or optimized. It does not define a universal situationspace or loss function.
-
-These omissions are deliberate. The artefact constrains structure while preserving domain-specific freedom.
-
----
-
-## Appendix A: Formal Composition (Reference)
-
-The complete operator can be written as:
-
-    SA_g(y_{≤t}) = R_g( C( P(y_{≤t}) ) )
-
----
-
-## Appendix B: Relation to Existing Theories
-
-Unlike classical state estimation, this formulation does not attempt to reconstruct the physical state. Unlike POMDP formulations, it separates goal-conditioned relevance from dynamics and belief evolution. Unlike human-centric situation awareness taxonomies, it is defined independently of cognition while remaining compatible by abstraction.
+Here, projection means abstraction or summarization for relevance, not automatically forecasting. See limitations.md.
