@@ -1,87 +1,59 @@
 # Situation Awareness Operator Framework
 
-Welcome to the Situation Awareness (SA) framework repository.
+This framework describes how engineered systems transform observations into goal-relevant representations.
 
-## What is this?
-
-This repository defines **situation awareness as a structured, goal-conditioned operator** for engineered systems.
-
-Instead of treating SA as an informal concept, we decompose it into three explicit, auditable functions:
-
-```
+```text
 SA_g = R_g ∘ C ∘ P
 ```
 
-- **P (Perception)** — transforms raw observations into semantic concepts
-- **C (Comprehension)** — integrates concepts into an internal situation model
-- **R_g (Projection)** — reduces that model to what matters for the goal
+- **Perception:** what has been observed or detected?
+- **Comprehension:** what situation might be occurring?
+- **Projection:** which representation matters for this goal?
 
-This separation makes SA explicit, inspectable, and comparable across systems.
+## Canonical Interfaces
 
-## Why does this matter?
+```text
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
+SA_g : Y^{≤t} → U_g
+```
 
-Most systems treat SA implicitly. When things go wrong, it is hard to diagnose whether the failure was in sensing, interpretation, or relevance. This framework makes all three visible.
+Comprehension produces a situation belief. Projection exposes a distribution or another explicitly typed representation for downstream use.
 
-By isolating these three functions, you can:
+## Main Principles
 
-- reason clearly about system behavior
-- compare alternative designs
-- diagnose failures by layer
-- reuse perception and comprehension across goals
-- make abstraction and relevance decisions explicit
+- Detection, inference, and relevance have separate responsibilities.
+- Goals affect projection in the reference architecture.
+- Reusing upstream components requires adequate retained information.
+- Projection does not preference-reweight the underlying belief.
+- Output contracts declare information loss and uncertainty handling.
+- Action selection remains downstream.
 
-## Getting started
+The decomposition supports inspection and validation. It does not guarantee correctness, robustness, or safety.
 
-**New to this framework?**
-Start with the [README](README.md).
+## Start Here
 
-**Want the formal definition?**
-Read [sa_operator.md](sa_operator.md).
+- [Overview and repository map](README.md)
+- [Framework definition](sa_operator.md)
+- [Shared notation](notations.md)
+- [System analysis guidelines](analysis_guidelines.md)
 
-**Want to apply this to a real system?**
-Read [analysis_guidelines.md](analysis_guidelines.md).
+## Operator Specifications
 
-## Core documents
+- [Perception](perception_operator.md)
+- [Comprehension](comprehension_operator.md)
+- [Projection](projection_operator.md)
 
-- [README.md](README.md) — overview and repo map
-- [sa_operator.md](sa_operator.md) — formal operator definition
-- [design_principle.md](design_principle.md) — rationale and design principles
-- [analysis_guidelines.md](analysis_guidelines.md) — how to analyze a system with this framework
-- [perception_operator.md](perception_operator.md) — perception operator specification
-- [comprehension_operator.md](comprehension_operator.md) — comprehension operator specification
-- [projection_operator.md](projection_operator.md) — projection operator specification
-- [notations.md](notations.md) — symbols and conventions
-- [limitations.md](limitations.md) — scope and intentional boundaries
+## Design and Scope
 
-## Key ideas
+- [Projection patterns](projection_patterns.md)
+- [Design principles](design_principle.md)
+- [End-to-end learning and modular SA](sa_architecture_and_sw_2_0.md)
+- [Limitations](limitations.md)
 
-**Separation of concerns**
-Perception, comprehension, and projection have distinct responsibilities.
+## Terminology
 
-**Goal locality**
-Goals affect SA only through projection. Perception and comprehension are reusable and goal-agnostic.
+In this repository, *projection* means goal-conditioned abstraction or summarization. It does not necessarily mean prediction.
 
-**Explicit abstraction**
-All systems abstract information. This framework makes that abstraction visible and analyzable.
-
-**Representational, not behavioral**
-SA prepares information for downstream use; it does not directly decide or control.
-
-## Suggested reading order
-
-1. [README.md](README.md)
-2. [sa_operator.md](sa_operator.md)
-3. [design_principle.md](design_principle.md)
-4. [analysis_guidelines.md](analysis_guidelines.md)
-5. [projection_operator.md](projection_operator.md)
-
-## What this is not
-
-- not a control algorithm
-- not a planning method
-- not a model of human cognition
-- not a substitute for domain-specific safety analysis
-
----
-
-Version: 1.0
+See [notations.md](notations.md) for the authoritative conventions.
