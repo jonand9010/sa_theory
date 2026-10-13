@@ -1,130 +1,181 @@
 # Analysis Guidelines for Situation Awareness Systems
 
-This document provides practical guidance for analyzing situation awareness (SA) in existing or proposed systems using the Situation Awareness framework defined in this repository. The emphasis is on concrete system artifacts and representations rather than abstract qualities, performance metrics, or behavioral outcomes.
+This document describes how to analyze an existing or proposed system using the Situation Awareness framework.
 
-The guidelines are intended to support architectural reasoning, design reviews, and post-incident analysis by making representational choices explicit.
+The analysis identifies concrete representations, transformations, assumptions, and consumers.
 
----
+Structural analysis can be performed without ground truth. Claims about accuracy, calibration, or performance require additional evidence.
 
-## 1. Purpose and Scope of Analysis
+## 1. Establish the Scope
 
-Analysis using the SA framework aims to understand how a system represents its environment internally, how that representation is reduced, and how the resulting information is made available to downstream components.
+Identify:
 
-The focus is not on whether the system behaved optimally or correctly, but on how information was structured, transformed, and exposed. This type of analysis can be carried out without access to ground truth and without assuming that a single “correct” behavior exists.
+- the system and operating domain
+- the observations available
+- the goals under consideration
+- the downstream consumers
+- the tasks or decisions those consumers must support
 
----
+Describe goals through requirements rather than names alone. “Safety” or “diagnostics” does not specify which information a consumer needs.
 
-## 2. Identifying the Situation Awareness Pipeline
+## 2. Identify the Functional Pipeline
 
-The first step in analysis is to identify the components that together form the system’s situation awareness pipeline. These components correspond conceptually to perception, comprehension, and projection, even if they are not labeled as such in the implementation.
+Locate the responsibilities corresponding to:
 
-At this stage, the analyst should identify where raw data enters the system, where it is transformed into semantic entities or signals, where these are combined into an internal situation representation, and where that representation is reduced or summarized for downstream use.
+```text
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
+```
 
-*Example:*  
-In an industrial process monitoring system, raw sensor measurements such as temperatures, pressures, and flow rates are first validated and filtered (perception). These signals are then integrated into an internal process model that estimates operating regimes and latent fault hypotheses (comprehension). Finally, selected aspects of this internal model are reduced to alarm states and health indicators presented to operators or supervisory systems (projection).
+Do not assume that each operator corresponds to one software component.
 
----
+For each responsibility, identify its inputs, outputs, configuration, and available evidence. If an intermediate representation is implicit, record that limitation rather than assuming its meaning.
 
-## 3. Analyzing Perception: What Is Detected
+## 3. Analyze Perception
 
-Analysis of perception focuses on what the system is capable of detecting and representing as basic semantic elements.
+Describe the concept records produced from observations.
 
-This involves identifying the concrete outputs of perception, such as named signals, events, or measurements, together with any associated attributes like validity flags, confidence measures, or timestamps. These outputs are often visible as variables, message fields, or logged data streams.
+Record:
 
-Equally important is identifying what the system cannot detect by design. Any limitation at this stage constrains all downstream reasoning and cannot be compensated for later.
+- detectable entities, events, attributes, and relations
+- timestamps and source information
+- confidence semantics
+- validity and missing-data behavior
+- temporal filtering and revisions
+- information discarded
 
-*Example:*  
-A refinery monitoring system may measure temperature and pressure at multiple points but lack direct measurement of material composition inside a reactor. This means certain internal process deviations are fundamentally unobservable and must remain hypothetical.
+Distinguish missing evidence from a negative detection.
 
----
+Missing direct measurements do not by themselves establish unobservability. Assess whether indirect evidence and model assumptions support inference of the quantities of interest.
 
-## 4. Analyzing Comprehension: What Is Explained
+## 4. Analyze Comprehension
 
-Comprehension analysis focuses on how detected elements are transformed into an internal explanation of what may be occurring in the system.
+Describe the situation space `S` and the belief `b_t`.
 
-This typically involves identifying internal state variables, models, or hypotheses that encode causal or structural understanding. These representations aim to explain *why* observed signals look the way they do, rather than to summarize them for use.
+Record:
 
-The analyst should examine how temporal information is incorporated, whether multiple competing explanations are maintained, and what assumptions are embedded in the explanatory model.
+- the meaning of each state or hypothesis
+- excluded alternatives
+- whether faults can coexist
+- inference assumptions
+- temporal state and update rules
+- handling of conflicting or delayed evidence
+- calibration evidence and model limits
 
-*Example:*  
-In a power plant monitoring system, sensor readings may be interpreted through a thermodynamic model that infers latent operating states such as “stable load,” “thermal stress accumulation,” or “incipient fouling.” These inferred states are not alarms or outputs, but internal explanations that organize observations over time.
+For categorical states, verify that alternatives are mutually exclusive and exhaustive within the modeled domain.
 
-At this stage, the representation is intentionally rich and may include uncertainty, redundancy, or alternative hypotheses.
+Do not treat arbitrary confidence scores as probabilities without justification.
 
----
+If future outcomes are modeled, record their horizon and assumptions, including assumed future inputs or actions.
 
-## 5. Identifying the Projection Boundary
+## 5. Identify the Projection Boundary
 
-A critical step in SA analysis is identifying where and how the internal explanatory representation is reduced.
+Locate where the situation belief is transformed into information for a particular consumer.
 
-This projection boundary is typically where the system stops explaining the situation in detail and instead selects or constructs a representation suitable for downstream use. The projection boundary is not defined by modeling complexity, but by **intentional reduction**.
+The boundary is defined by goal-dependent representation, not by algorithmic complexity.
 
-The analyst should identify the exact outputs that leave the situation awareness subsystem, along with any thresholds, mappings, or configuration parameters that control which distinctions are preserved.
+For example, comprehension may maintain probabilities of several fault combinations while projection exposes only the probability that service is unavailable.
 
-*Example:*  
-An internal model may track several latent degradation mechanisms simultaneously, but projection may expose only whether any mechanism exceeds a predefined safety threshold.
+Record the exact mapping and its configuration.
 
----
+## 6. Describe the Output Contract
 
-## 6. Describing the Projected Representation
+For each projected output, specify:
 
-The projected representation should be described concretely and precisely.
+- its type and possible values
+- units and interpretation
+- mapping, thresholds, and quantile levels
+- uncertainty retained or omitted
+- distinctions discarded
+- update timing and validity
+- behavior for missing or stale inputs
 
-Rather than referring to it abstractly, the analyst should be able to write down the exact form of the projected output: the set of possible values, their meanings, update rates, and intended interpretation.
+Explicitly distinguish probabilities, scores, descriptive categories, and commands.
 
-*Example:*  
-A projected representation may consist of a single operational status variable taking values such as “normal,” “restricted,” or “shutdown required,” derived from a complex internal state estimate.
+A `fire_probability` field describes a quantity. A `shut_down_now` command selects an action and belongs downstream.
 
-If the projected representation cannot be described precisely, this is a strong indication that projection is implicit and should be clarified.
+## 7. Verify the Goal and Consumer
 
----
+Projection reveals which distinctions are exposed, but does not uniquely identify the goal.
 
-## 7. Inferring the Goal from the Projection
+Check the intended goal against requirements and actual consumer behavior.
 
-In this framework, the goal is inferred from the structure of the projected representation itself.
+The same representation may support several goals. Conversely, a consumer may require distinctions that the current projection omits.
 
-By examining which internal distinctions are preserved and which are collapsed, the analyst can infer what the system considers relevant at the point of projection.
+## 8. Check Adequacy
 
-*Example:*  
-If multiple internal degradation mechanisms are all collapsed into a single “unsafe” state, the implicit goal is rapid risk signaling rather than diagnostic differentiation.
+Construct beliefs with the same projected output:
 
----
+```text
+R_g(b_1) = R_g(b_2)
+```
 
-## 8. Assessing Alignment with Downstream Use
+Ask whether the intended consumer needs to treat them differently.
 
-Once the projected representation is understood, it should be compared to how downstream components actually use it.
+For example:
 
-Misalignment occurs when downstream logic assumes distinctions that are no longer present, or when projection preserves distinctions that downstream components ignore.
+```text
+Belief A:
+normal      0.60
+overheating 0.40
+fire        0.00
 
-*Example:*  
-A maintenance planner may assume that different fault causes are distinguished, while the projection exposes only a generic “maintenance required” flag.
+Belief B:
+normal      0.60
+overheating 0.00
+fire        0.40
+```
 
----
+Both produce `Pr(abnormal) = 0.40`.
 
-## 9. Comparative Analysis of Alternative Designs
+That output cannot support a consumer requiring different treatment of fire and overheating.
 
-The SA framework supports comparison between different system designs by focusing on representational structure rather than performance metrics.
+This is a way to find inadequacy, not proof that every necessary distinction has been checked.
 
-When comparing two designs, the analyst should examine how perception outputs differ, how explanatory situation representations are constructed, and how projection differs.
+## 9. Compare Alternative Designs
 
-*Example:*  
-Two systems may share the same internal degradation model, but differ in that one projects a single binary alarm while the other projects a graded health margin. Differences in operational behavior follow directly from this projection choice.
+Compare designs through their contracts:
 
----
+| Layer | Comparison questions |
+| --- | --- |
+| Perception | Which concepts and evidence-quality information are exposed? |
+| Comprehension | Which situations and dependencies are represented? |
+| Projection | Which distinctions and uncertainty are retained? |
+| Consumer | Which tasks can the available output support? |
 
-## 10. Application to Failure and Incident Analysis
+Differences in representation affect the information available downstream. Resulting behavior also depends on the consuming policy.
 
-In post-incident analysis, the framework can be used to trace failures through the SA pipeline.
+## 10. Analyze Incidents
 
-Rather than attributing failure directly to incorrect actions, the analyst should examine what was detected, how it was explained internally, and what aspects of that explanation were ultimately projected.
+Trace an incident through the pipeline:
 
-*Example:*  
-An unexpected equipment failure may be traced to a projection that suppressed early internal indicators of stress in favor of a simplified operational status.
+1. What observations were available at the relevant time?
+2. What concepts were detected?
+3. What belief was constructed?
+4. What information was projected?
+5. How did the consumer interpret and use it?
 
----
+Separate detection errors, inference errors, projection inadequacy, and downstream misuse.
 
-## 11. Summary
+Failures may involve several layers; the decomposition does not guarantee a unique cause.
 
-These guidelines provide a concrete method for applying the Situation Awareness framework to real systems. By clearly separating internal explanation from goal-driven reduction, the framework enables precise reasoning about abstraction, relevance, and system behavior without conflating modeling with decision support.
+## 11. Review Record
 
-The embedded examples demonstrate how comprehension and projection play distinct and non-overlapping roles in industrial monitoring contexts.
+For each goal and consumer, retain a concise review record:
+
+| Item | Required detail |
+| --- | --- |
+| Goal | Required distinctions and intended use |
+| Perception | Concept schema, timing, validity, confidence semantics |
+| Comprehension | Situation space, belief representation, model assumptions |
+| Projection | Mapping, output type, units, uncertainty semantics |
+| Information loss | Merged distinctions and omitted uncertainty |
+| Consumer | Actual use of the output |
+| Validation | Evidence for accuracy, calibration, adequacy, and timing |
+
+## 12. Summary
+
+Analysis using this framework makes representational choices explicit.
+
+It connects observations, concepts, beliefs, and goal-relevant outputs to their actual consumers, while keeping architectural description separate from validation claims.
