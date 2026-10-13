@@ -1,93 +1,142 @@
 # The Perception Operator in Situation Awareness Systems
 
-Version: 1.2  
-Status: Technical specification  
+Version: 1.3  
+Status: Technical specification
 
----
+## 1. Role
 
-## 1. Introduction
+Perception answers:
 
-Perception is the first stage in the situation awareness (SA) pipeline. Its role is to transform raw observations into semantically meaningful elements that can be reasoned about by higher-level system components.
+**What has been observed or detected?**
 
-This document defines the perception operator formally and clarifies its scope, responsibilities, and relationship to the rest of the situation awareness framework.
+It transforms raw observations into semantic records that comprehension can interpret. These records describe detected entities, events, attributes, or relations; they do not yet constitute an explanation of the overall situation.
 
----
+In the reference architecture, perception is held fixed across goals. It does not rank situations by consequence, select actions, or construct competing explanations of the overall situation.
 
-## 2. Position Within the Situation Awareness Framework
+Detection still depends on models, ontologies, and sensor assumptions. Goal independence does not mean that perception is assumption-free.
 
-Situation awareness is defined as the composition of three operators:
+## 2. Formal Interface
 
-    SA_g = R_g ∘ C ∘ P
+Using the conventions in [notations.md](notations.md):
 
-where:
+```text
+P : Y^{≤t} → Z^{≤t}
 
-- P denotes the perception operator
-- C denotes the comprehension operator
-- R_g denotes the projection operator
+z_{≤t} = P(y_{≤t})
+```
 
-The perception operator is the entry point of the situation awareness pipeline. It operates directly on raw observations and is independent of goals or operational context.
+Here:
 
----
+- `Y` is the raw observation space.
+- `y_{≤t}` is the observation history through time `t`.
+- `Z` is the semantic concept record space.
+- `z_{≤t}` is the concept record history available at time `t`.
 
-## 3. Role of the Perception Operator
+The history-level interface ensures that perception's output matches comprehension's input:
 
-The perception operator answers the question:
+```text
+C : Z^{≤t} → Prob(S)
+```
 
-What has been observed or detected?
+This is an interface definition, not a requirement to store or recompute the entire history.
 
-Its purpose is to extract semantic concepts from raw sensor data. These concepts serve as the basic informational units for subsequent reasoning but do not yet constitute an understanding of the situation.
+## 3. Semantic Records
 
-Perception does not explain, predict, or evaluate. It detects.
+A concept record may contain:
 
----
-
-## 4. Formal Definition
-
-Let Y denote the space of raw observations, and let Z denote the space of detected concepts.
-
-The perception operator is defined as:
-
-    P : Y^{≤t} → Z
-
-where Y^{≤t} represents the observation history up to time t.
-
-The output Z may include:
-
-- detected objects or entities
-- events or signals
+- detected entities or objects
+- detected events
 - attributes or measurements
 - relations between detected elements
+- observation timestamps
+- confidence information
+- validity and missing-data flags
+- source or provenance information
 
-Uncertainty, noise, and ambiguity may be present in the output and are propagated forward.
+The record schema is domain-specific and must define the meaning of each field.
 
----
+For example, a monitoring system might produce:
 
-## 5. Characteristics of the Perception Operator
+```text
+Concept: elevated_temperature
+Observed at: t
+Measured value: 92 °C
+Detection rule: temperature exceeds 85 °C
+Sensor validity: valid
+```
 
-The perception operator has the following characteristics:
+This record states what was detected. It does not establish why the temperature is elevated, whether a fault exists, or what action should be taken.
 
-- It is goal-independent.
-- It is descriptive rather than interpretive.
-- It does not impose causal or temporal structure.
-- It does not aggregate information into higher-level hypotheses.
+Those questions belong to comprehension and downstream components.
 
-Both classical signal processing pipelines and learned detection models fit naturally within this operator.
+## 4. Temporal Processing
 
----
+Perception may use temporal information to produce semantic records. Examples include filtering, tracking, event detection, and estimating attributes from multiple observations.
 
-## 6. Boundary of Responsibility
+The use of memory does not by itself make an operation comprehension. The boundary is determined by the meaning of its output:
 
-The perception operator is not responsible for:
+- Perception produces detected concepts.
+- Comprehension produces a belief about the overall situation.
 
-- determining what the detected elements mean
-- assessing relevance or importance
-- resolving ambiguity between competing explanations
-- predicting future developments
+A streaming implementation may emit individual records and maintain the information needed for subsequent processing.
 
-These responsibilities belong to the comprehension operator.
+A causal implementation must not use observations that were unavailable when an output was produced. If later evidence revises an earlier detection, the record should distinguish the observation time from the revision time.
 
----
+## 5. Uncertainty and Missing Evidence
 
-## 7. Summary
+Perception should expose relevant ambiguity, measurement uncertainty, and missing evidence through its output contract.
 
-The perception operator transforms raw observations into semantic concepts.
+A detector confidence score is not automatically a calibrated probability. Its meaning and limitations must be documented.
+
+Likewise, the absence of a detection is not necessarily evidence that the corresponding entity or event is absent. It may reflect:
+
+- insufficient sensor coverage
+- missing or invalid observations
+- detection thresholds
+- limited detector sensitivity
+
+Comprehension must be able to distinguish these cases when they affect situation inference.
+
+## 6. Information Loss and Goal Reuse
+
+Perception often compresses raw observations. Information discarded at this stage may constrain subsequent inference.
+
+A property that is not directly measured may still be inferred from indirect evidence and model assumptions. Missing direct measurement alone does not establish unobservability.
+
+Holding perception fixed across goals is appropriate only when its outputs retain the information those goals require. A new goal may require additional concepts, greater resolution, or different uncertainty information.
+
+Such changes extend the upstream representation rather than merely changing projection.
+
+## 7. Boundary of Responsibility
+
+Perception is responsible for detecting and describing concepts.
+
+It is not responsible for:
+
+- constructing competing explanations of the overall situation
+- assessing consequences under a goal
+- determining which situation distinctions matter downstream
+- selecting actions or operational modes
+
+Comprehension integrates the concept history into a situation belief. Projection exposes a goal-relevant representation of that belief.
+
+## 8. Review Questions
+
+When specifying or evaluating perception, ask:
+
+- Which concepts can be detected, and which are outside the output schema?
+- How are timestamps, validity, uncertainty, and revisions represented?
+- Can missing evidence be distinguished from a negative detection?
+- What information is discarded?
+- Do downstream goals require any discarded information?
+- Can detector outputs be validated separately from situation inference?
+
+## 9. Summary
+
+Perception transforms observation history into semantic record history:
+
+```text
+P : Y^{≤t} → Z^{≤t}
+```
+
+Its output provides the detected concepts and evidence-quality information needed by comprehension. It remains descriptive and is held fixed across goals in the reference architecture.
