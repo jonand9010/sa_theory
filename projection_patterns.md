@@ -1,241 +1,380 @@
 # Projection Patterns in Situation Awareness Systems
 
-This document describes common **projection patterns** used in situation awareness (SA) systems. A projection pattern characterizes how a rich internal situation representation is reduced to a goal-relevant form.
+This document describes recurring ways to transform a situation belief into a goal-relevant representation.
 
-The purpose of this document is not to prescribe correct projections, but to provide a vocabulary for recognizing, comparing, and reasoning about projection designs across systems and domains.
+The patterns provide a vocabulary for designing, comparing, and evaluating projections. They do not establish that a particular projection is adequate for its intended use.
 
----
+## 1. Common Interface
 
-## 1. Purpose of Projection Patterns
+Using the conventions in [notations.md](notations.md):
 
-The projection operator maps an internal situation representation S to a goal-relevant representation space U_g.
+```text
+R_g : Prob(S) → U_g
 
-    R_g : S → U_g
+u_{g,t} = R_g(b_t)
+```
 
-While the structure of S is often complex and domain-specific, the structure of U_g tends to follow recurring forms. These recurring forms constitute projection patterns.
+Here:
 
-Identifying projection patterns makes it possible to:
-- compare systems with different internal models
-- reason about abstraction choices explicitly
-- diagnose representational mismatches
-- communicate design intent clearly
+- `b_t` is the situation belief produced by comprehension.
+- `g` specifies the goal or operational context.
+- `U_g` defines the output type and its interpretation.
 
----
+Two constructions must be distinguished:
 
-## 2. Classification-Based Projection
+1. **State abstraction:** group situations and preserve their aggregated probabilities.
+2. **Belief summary:** derive a score, margin, bound, category, or structured record from the belief.
 
-### Description
+These constructions can be combined, but their meanings must remain explicit.
 
-Classification-based projection maps situations to a finite set of discrete categories. Each category represents a qualitatively distinct situation from the perspective of the goal.
+Here, *projection* means representation according to relevance. It does not necessarily mean prediction.
 
-### Typical Structure
+## 2. Category-Based Projection
 
-    U_g = {c_1, c_2, ..., c_k}
+### Purpose
+
+Expose a small set of descriptive categories relevant to the goal.
 
 Examples include:
+
 - normal / degraded / unsafe
-- nominal / warning / critical
-- allowed / restricted / forbidden
+- fault absent / fault present
+- sufficient / insufficient resource margin
 
-### Use Cases
+### Distribution Over Categories
 
-- safety monitoring
-- supervisory control
-- alerting and escalation
-- human–machine interfaces
+Define a measurable abstraction:
 
-### Characteristics
+```text
+φ_g : S → V_g
 
-- highly interpretable
-- stable under noise
-- limited expressiveness
-- may hide fine-grained distinctions
+V_g = {c_1, ..., c_k}
+U_g = Prob(V_g)
+```
 
----
+The projected probability of a category is:
+
+```text
+R_g(b)(c) = ∑_{s: φ_g(s)=c} b(s)
+```
+
+for a finite situation space.
+
+For example:
+
+```text
+Original belief:
+normal                   0.60
+overheating_without_fire  0.30
+fire_present             0.10
+
+Projected belief:
+normal    0.60
+abnormal  0.40
+```
+
+The projection preserves the probability of abnormal operation while discarding the distinction between overheating and fire.
+
+### Hard Category Output
+
+A hard label instead uses:
+
+```text
+U_g = V_g
+```
+
+It requires a specified rule, such as selecting the most probable category or applying a threshold to a category probability.
+
+A hard label discards uncertainty unless additional output fields retain it. A most-probable label is not automatically an appropriate basis for a consequential decision.
+
+### Review Considerations
+
+- Are the categories mutually exclusive and exhaustive?
+- Which situations are merged?
+- Is the output a distribution or a single label?
+- How sensitive is the output to category boundaries or thresholds?
+- Could merged situations require different downstream treatment?
 
 ## 3. Margin-Based Projection
 
-### Description
+### Purpose
 
-Margin-based projection maps situations to scalar or vector-valued quantities representing distance to constraints, limits, or safety boundaries.
+Expose distance to a specified constraint or boundary.
 
-### Typical Structure
+Define a margin function:
 
-    U_g ⊆ R^n
+```text
+m_g : S → ℝ
+```
 
-Examples include:
-- minimum distance to obstacle
-- time-to-collision
-- energy or resource reserves
-- constraint slack variables
+For example, positive values may indicate remaining capacity and negative values a violated constraint. The sign convention and units must be declared.
 
-### Use Cases
+### Output Options
 
-- safety envelopes
-- constraint monitoring
-- feasibility assessment
-- downstream optimization preparation
+Projection may expose:
 
-### Characteristics
+- a distribution over the margin
+- expected margin
+- a specified margin quantile
+- probability that the margin is negative
 
-- preserves quantitative structure
-- sensitive to modeling assumptions
-- supports graded responses
-- may be harder to interpret directly
+Examples:
 
----
+```text
+Expected margin:
+R_g(b) = ∫ m_g(s) b(ds)
+
+Probability of violation:
+R_g(b) = b({s : m_g(s) < 0})
+```
+
+These outputs answer different questions. A positive expected margin does not imply a low probability of violation.
+
+### Examples
+
+- temperature headroom below a limit
+- remaining energy relative to a requirement
+- distance from a capacity constraint
+- predicted time margin before a modeled event
+
+A future margin requires a predictive model in comprehension, with a stated horizon and assumptions.
+
+### Review Considerations
+
+- What constraint defines the margin?
+- What are the units and sign convention?
+- Which aspect of uncertainty is exposed?
+- Does the summary hide a consequential tail of the distribution?
 
 ## 4. Indicator-Based Projection
 
-### Description
+### Purpose
 
-Indicator-based projection maps situations to one or more scalar indicators that summarize aspects of relevance without encoding explicit constraints.
-
-### Typical Structure
-
-    U_g ⊆ R^k
-
-Examples include:
-- risk scores
-- confidence levels
-- priority indices
-- health indicators
-
-### Use Cases
-
-- ranking or prioritization
-- resource allocation
-- monitoring dashboards
-- decision support
-
-### Characteristics
-
-- compact representation
-- flexible aggregation
-- may obscure causal structure
-- sensitive to calibration
-
----
-
-## 5. Mode-Based Projection
-
-### Description
-
-Mode-based projection maps situations to discrete operational modes that determine how the system should behave or be interpreted downstream.
+Expose compact quantities such as event probabilities, severity scores, or health indicators.
 
 ### Typical Structure
 
-    U_g = {m_1, m_2, ..., m_k}
+```text
+U_g ⊆ ℝ^k
+```
 
-Examples include:
-- autonomous / assisted / manual
-- nominal / fallback / emergency
-- exploration / execution / recovery
+For a specified event:
 
-### Use Cases
+```text
+R_g(b) = b(E_g)
+```
 
-- supervisory logic
-- fault handling
-- system reconfiguration
-- responsibility handover
+For a specified, integrable severity function:
 
-### Characteristics
+```text
+R_g(b) = ∫ ℓ_g(s) b(ds)
+```
 
-- strong behavioral implications
-- coarse abstraction
-- clear system-level meaning
-- requires careful transition logic
+The first output is a probability. The second is an expected severity in the units of `ℓ_g`.
 
----
+### Examples
 
-## 6. Conservative (Worst-Case) Projection
+- probability of a network fault
+- expected service disruption
+- probability of unavailable capacity
+- an explicitly defined health score
 
-### Description
+### Review Considerations
 
-Conservative projection maps situations to worst-case or lower-bound summaries that emphasize safety or robustness.
+- Is the indicator a probability, expected quantity, or constructed score?
+- What assumptions and scaling define it?
+- Does aggregation hide different fault causes or consequences?
+- Can consumers interpret it without access to the full belief?
 
-### Typical Structure
+A score is not a probability merely because it lies in `[0, 1]`. Consequence weighting must not be presented as a change in the underlying belief.
 
-    U_g = worst_case_summary(S)
+## 5. Mode-Relevant Projection
 
-Examples include:
-- maximum estimated risk
-- minimum remaining margin
-- upper bounds on uncertainty
+### Purpose
 
-### Use Cases
+Expose information needed by a downstream policy to assess operational modes.
 
-- safety-critical systems
-- certification contexts
-- fail-safe monitoring
-- conservative decision-making
-
-### Characteristics
-
-- robust to uncertainty
-- may be overly pessimistic
-- reduces sensitivity to noise
-- can mask benign situations
-
----
-
-## 7. Interface-Driven Projection
-
-### Description
-
-Interface-driven projection structures the situation representation according to the needs of a human or external system interface.
+Projection reports mode-related conditions, feasibility, or eligibility. It does not select or activate a mode.
 
 ### Typical Structure
 
-    U_g = interface-aligned representation
+```text
+U_g = structured mode-condition record
+```
+
+Example fields might include:
+
+```text
+probability_primary_service_available
+probability_fallback_service_available
+capacity_margin
+evidence_validity
+```
+
+A descriptive eligibility label can also be exposed when its criteria and treatment of uncertainty are specified.
+
+### Examples
+
+- conditions relevant to primary versus fallback operation
+- resource availability for an operating mode
+- confidence that a mode's prerequisites hold
+
+### Review Considerations
+
+- Does the output describe conditions or issue a command?
+- Are eligibility criteria and uncertainty semantics explicit?
+- What happens when evidence is stale or incomplete?
+- Which downstream component selects and activates the mode?
+
+Commands such as `activate_fallback` belong to decision logic.
+
+## 6. Conservative Bound Projection
+
+### Purpose
+
+Expose a bound or conservative summary under declared uncertainty assumptions.
+
+### Uncertainty-Set Construction
+
+For a quantity `q_g : S → ℝ` and a specified nonempty set `K(b) ⊆ S`, a projection may report:
+
+```text
+Upper bound:
+R_g(b) = sup_{s ∈ K(b)} q_g(s)
+
+Lower bound:
+R_g(b) = inf_{s ∈ K(b)} q_g(s)
+```
+
+The output is a bound over `K(b)`, not automatically over every possible real-world situation.
+
+The contract must explain how the set is constructed, its intended coverage, and the assumptions supporting that coverage.
+
+### Quantile Construction
+
+A projection may instead report a specified quantile of a quantity under the belief.
+
+A quantile describes probability coverage within the model. It is not an absolute worst-case guarantee.
+
+### Examples
+
+- lower bound on remaining capacity over a declared set
+- upper quantile of modeled temperature
+- lower quantile of available energy
+
+### Review Considerations
+
+- Is the output an extremum, quantile, or statistical confidence bound?
+- Which uncertainty sources are represented?
+- Are the bound direction and coverage explicit?
+- Is the bound finite and useful?
+- How sensitive is it to model assumptions or outliers?
+
+Taking a worst case over the entire support can be uninformative, particularly with unbounded distributions. Conservative construction alone does not establish safety.
+
+## 7. Interface-Oriented Projection
+
+### Purpose
+
+Expose a representation suited to a human or external-system interface.
+
+### Typical Structure
+
+```text
+U_g = structured interface record
+```
 
 Examples include:
-- status lights or indicators
-- alert messages
-- summarized reports
-- visual overlays
 
-### Use Cases
+- status summaries with probabilities
+- diagnostic reports
+- condition indicators with supporting evidence
+- compact telemetry messages
 
-- human–machine interaction
-- supervisory control
-- explainability and transparency
-- regulatory reporting
+Formatting alone does not necessarily constitute a new projection. The projection choice lies in which distinctions and uncertainty are retained, summarized, or omitted.
 
-### Characteristics
+### Review Considerations
 
-- optimized for interpretability
-- often domain-specific
-- may discard internal detail
-- tightly coupled to presentation constraints
+- What does the consumer need to distinguish?
+- Are probabilities and scores clearly labeled?
+- Are timestamps and validity visible?
+- Does presentation hide ambiguity?
+- Can users access additional detail when needed?
 
----
+A concise interface should not imply greater certainty than the underlying belief supports.
 
-## 8. Combining Projection Patterns
+## 8. Combining Patterns
 
-In practice, projection operators often combine multiple patterns.
+A projection can expose several complementary outputs:
 
-Examples:
-- classification + margin (e.g. risk class with buffer)
-- indicator + conservative bound
-- mode selection driven by margin thresholds
+```text
+U_g = U_g^(1) × ... × U_g^(k)
 
-Such combinations should be treated as intentional design choices rather than ad hoc implementations.
+R_g(b) = (
+    R_g^(1)(b),
+    ...,
+    R_g^(k)(b)
+)
+```
 
----
+Examples include:
 
-## 9. Relationship to Goals
+- category probabilities plus a margin quantile
+- event probability plus expected severity
+- mode-condition information plus evidence validity
+- a health indicator plus diagnostic probabilities
 
-The choice of projection pattern is determined by the goal g.
+Each component needs an explicit meaning.
 
-Different goals applied to the same internal situation representation may result in different projection patterns, even when perception and comprehension remain unchanged.
+Multiple marginal summaries do not necessarily preserve dependencies. If downstream use requires joint probabilities or correlations, those must be retained explicitly.
 
-This highlights the role of projection as the primary mechanism through which goals influence situation awareness.
+## 9. Adequacy Check
 
----
+For any pattern, ask whether two beliefs can produce the same output while requiring different treatment by the intended consumer.
 
-## 10. Summary
+For example:
 
-Projection patterns describe common structural forms of goal-relevant situation representations. They provide a vocabulary for reasoning about abstraction choices in situation awareness systems without committing to specific algorithms or domains.
+```text
+Belief A:
+normal      0.60
+overheating 0.40
+fire        0.00
 
-By identifying and naming projection patterns, system designers can make relevance explicit, compare architectures systematically, and reason about the consequences of abstraction decisions.
+Belief B:
+normal      0.60
+overheating 0.00
+fire        0.40
+```
+
+Both produce:
+
+```text
+Pr(abnormal) = 0.40
+```
+
+That projection cannot support a consumer that needs to distinguish fire from overheating.
+
+Adequacy is therefore relative to a specified downstream requirement. A compact output is useful only when its information loss is acceptable for that use.
+
+## 10. Pattern Selection and Documentation
+
+Select patterns according to the distinctions and quantities the consumer requires.
+
+For each projection, document:
+
+- the goal and intended consumer
+- the input belief and its assumptions
+- the output type, units, and interpretation
+- the mapping and configuration parameters
+- uncertainty retained and omitted
+- distinctions discarded
+- timing and validity behavior
+- evidence of adequacy for the intended use
+
+See [projection_operator.md](projection_operator.md) for the complete projection contract and [analysis_guidelines.md](analysis_guidelines.md) for system review guidance.
+
+## 11. Summary
+
+Projection patterns describe recurring output structures for goal-relevant representations.
+
+Their value lies in making abstraction choices explicit: what is retained, what is discarded, how uncertainty is handled, and what downstream use the output can support.
