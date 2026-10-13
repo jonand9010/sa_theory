@@ -1,103 +1,113 @@
 # Design Principles of the Situation Awareness Operator
 
-This document describes the core design principles underlying the separation of situation awareness into **Perception**, **Comprehension**, and **Projection** operators. The purpose is to explain why this separation is necessary, what problems it solves, and how it supports robust system design.
+This document explains the architectural principles behind the separation of situation awareness into perception, comprehension, and projection.
 
----
+These principles motivate the design. They do not establish correctness, robustness, or safety by themselves.
 
-## 1. Motivation
+## 1. Separation of Responsibilities
 
-Situation awareness is often treated as an implicit by-product of sensing, estimation, or decision-making. In such formulations, detection quality, interpretation, relevance, and action selection are tightly coupled, making it difficult to reason about system behavior, diagnose failures, or compare alternative designs.
+The framework assigns three distinct responsibilities:
 
-The operator-based separation presented here is motivated by the need to make situation awareness **explicit, inspectable, and modular**.
+- Perception detects semantic concepts from observations.
+- Comprehension constructs a belief over internal situations.
+- Projection exposes a representation relevant to a specified goal.
 
----
+The canonical interfaces are:
 
-## 2. Principle of Separation of Concerns
+```text
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
 
-Each operator in the situation awareness pipeline has a single, well-defined responsibility:
+SA_g = R_g ∘ C ∘ P
+```
 
-- Perception determines what is detected from observations
-- Comprehension determines what situation is believed to be occurring
-- Projection determines what aspects of the situation are relevant for a given goal
+This separation supports distinct questions about detection quality, situation inference, and information relevance.
 
-Separating these concerns avoids conflating sensing errors, modeling errors, and relevance errors, which have fundamentally different causes and consequences.
+It is a functional decomposition, not a requirement for three separate software modules.
 
----
+## 2. Evidence Before Preference
 
-## 3. Principle of Descriptive Before Normative Processing
+Perception and comprehension are descriptive. They represent what has been detected and what situations the evidence supports.
 
-Perception and comprehension are strictly descriptive operators. They aim to represent what is observed and what may be happening, without introducing preferences, priorities, or intent.
+Projection introduces goal-dependent relevance by selecting distinctions or constructing summaries.
 
-Projection is the first normative operator. It introduces the notion of relevance by shaping the situation representation according to a goal or responsibility.
+Consequences may affect which quantities are exposed, but they do not change the underlying belief probabilities. Expected severity and other consequence-weighted quantities must be identified as scores rather than updated probabilities.
 
-This ordering ensures that relevance does not distort perception or interpretation, and that goals do not influence what the system believes about the world.
+## 3. Goal Locality
 
----
+In the reference architecture, the goal parameter appears only in projection.
 
-## 4. Principle of Goal Locality
+Perception and comprehension are held fixed across the goals being considered. This permits several consumers to use different representations of the same situation belief.
 
-Goals affect situation awareness only through the projection operator.
+Goal locality is a design assumption. Active sensing, goal-dependent attention, and task-specific inference may require an extended architecture.
 
-Perception and comprehension are independent of goals and can therefore be reused across different operational contexts. Changing a goal corresponds to changing how the situation is projected, not how it is detected or understood.
+Reuse is appropriate only when upstream representations retain the information each goal requires.
 
-This locality of goal dependence supports modularity, reuse, and systematic analysis.
+## 4. Explicit Abstraction
 
----
+Every reduction of information should have a declared meaning.
 
-## 5. Principle of Explicit Abstraction
+For projection, this means specifying:
 
-All engineered systems abstract information. The critical question is not whether abstraction occurs, but where and how it occurs.
+- the input belief
+- the output space
+- the mapping or summary rule
+- the distinctions discarded
+- the uncertainty retained or omitted
+- the intended downstream use
 
-By introducing an explicit projection operator, abstraction becomes:
+An explicit mapping makes abstraction reviewable. It does not automatically make the abstraction adequate.
 
-- visible in the system architecture
-- analyzable and testable
-- adjustable without redesigning upstream components
+## 5. Explicit Uncertainty
 
-This reduces the risk of unintended abstraction errors that are difficult to trace.
+Comprehension produces a belief in `Prob(S)`.
 
----
+Projection may preserve a distribution over abstract states or expose a summary such as a probability, score, margin, bound, or category.
 
-## 6. Principle of Representational Stability
+These outputs carry different information. A hard label may omit uncertainty; an expected value may hide consequential tails; separate marginal summaries may omit dependencies.
 
-Rich internal situation models are often unstable or impractical for direct use by downstream components.
+The output contract must explain those limitations.
 
-Projection provides a controlled reduction of representation complexity, producing stable and interpretable outputs such as categories, margins, modes, or scores.
+## 6. Consumer-Relative Adequacy
 
-This stability is essential for interfaces, supervisory logic, and safety mechanisms.
+A projection is adequate only relative to a specified use.
 
----
+A useful check is to identify beliefs that produce the same projected output. If the consumer needs to distinguish those beliefs, the projection discards necessary information.
 
-## 7. Principle of Failure Mode Isolation
+Compactness alone is not a measure of projection quality.
 
-Different types of failures arise in different operators:
+## 7. Inspectable Interfaces
 
-- Perception failures involve missed or false detections
-- Comprehension failures involve incorrect or inconsistent situation hypotheses
-- Projection failures involve inappropriate abstraction or loss of relevant distinctions
+Named interfaces allow intermediate representations to be logged, tested, and compared.
 
-Separating operators allows failures to be localized, diagnosed, and mitigated without treating situation awareness as a monolithic capability.
+Inspectability depends on meaningful schemas and validation evidence. Naming an internal tensor or assigning it an operator symbol does not establish that it represents concepts, beliefs, or relevance.
 
----
+Fused and jointly learned implementations can use the framework when their claimed interfaces have identifiable meanings.
 
-## 8. Principle of Architectural Comparability
+## 8. Separation from Decision-Making
 
-Two systems may have identical sensors and models but differ significantly in behavior due to differences in how relevance is defined.
+Situation awareness prepares information for downstream use.
 
-By making projection explicit, the framework enables architectural comparison based on how systems abstract and expose situation information, rather than on opaque performance metrics alone.
+Action selection, planning, control, and operational mode activation remain downstream. Projection may expose mode conditions or eligibility, but it does not choose or activate a mode.
 
----
+This boundary keeps belief construction, relevance, and behavior distinct.
 
-## 9. Principle of Independence from Control and Optimization
+## 9. Validation over Architectural Guarantees
 
-Situation awareness is treated as a representational process, not a decision-making process.
+The decomposition can organize validation, but does not guarantee:
 
-The framework deliberately avoids embedding control logic, optimization objectives, or action selection within the SA operators. This ensures compatibility with a wide range of downstream architectures and avoids entangling awareness with behavior.
+- accurate detection
+- calibrated beliefs
+- sufficient projection
+- stable outputs
+- robust operation
+- safe decisions
 
----
+Those properties require evidence appropriate to the model, consumer, and operating domain.
 
 ## 10. Summary
 
-The separation of situation awareness into perception, comprehension, and projection operators is guided by principles of clarity, modularity, and robustness. By isolating detection, interpretation, and relevance, the framework enables more transparent system design, more precise analysis, and more reliable evolution of situation-aware systems.
+The framework makes detection, belief construction, and relevance explicit.
 
-These principles are intended to support both theoretical reasoning and practical engineering.
+Its architectural value lies in providing reviewable responsibilities and contracts. Its practical value depends on whether those contracts are implemented and validated.
