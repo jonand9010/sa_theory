@@ -1,135 +1,78 @@
 # Notation and Conventions
 
-This document defines the notation and naming conventions used throughout the Situation Awareness (SA) framework. Its purpose is to ensure consistency and avoid ambiguity across documents.
+This document defines the shared interfaces of the Situation Awareness (SA) framework.
 
-The notation is intentionally minimal and focuses on operator structure rather than algorithmic detail.
+## 1. Spaces and Elements
 
----
+| Symbol | Meaning |
+| --- | --- |
+| `X`, `x_t` | World or plant state space and state at time `t` |
+| `Y`, `y_t` | Raw observation space and observation at time `t` |
+| `Z`, `z_t` | Semantic concept record space and record at time `t` |
+| `S`, `s_t` | Internal situation space and a possible situation at time `t` |
+| `Prob(S)`, `b_t` | Probability measures over `S` and the current situation belief |
+| `G`, `g` | Goal or operational context space and an active goal |
+| `U_g`, `u_{g,t}` | Goal-relevant output space and a projected representation |
 
-## 1. Time and Observations
+`Prob(S)` distinguishes probability measures from the perception operator `P`. Beliefs may be represented by mass functions, densities, or other probability measures as appropriate. Spaces carrying probability measures have suitable measurable structure.
 
-- t  
-  Discrete or continuous time index.
+## 2. Time and Histories
 
-- y_t  
-  Raw observation at time t.
+The reference formulation uses discrete time: `t = 0, 1, ...`.
 
-- y_{≤t}  
-  Observation history up to and including time t.
+- `y_{≤t} = (y_0, ..., y_t)` belongs to `Y^{≤t}`.
+- `z_{≤t} = (z_0, ..., z_t)` belongs to `Z^{≤t}`.
+- Concept records can contain timestamps, missing-data flags, confidence information, entities, events, and relations.
 
-- Y  
-  Space of raw observations.
+Continuous-time implementations require corresponding history spaces and are outside this minimal notation.
 
----
+## 3. Canonical Interfaces
 
-## 2. Situation Awareness Operator
+At each time `t`:
 
-- SA_g  
-  Situation awareness operator parameterized by goal or operational context g.
+```text
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
+SA_g : Y^{≤t} → U_g
 
-The situation awareness pipeline is defined as:
+SA_g = R_g ∘ C ∘ P
+b_t = C(P(y_{≤t}))
+u_{g,t} = R_g(b_t)
+```
 
-    SA_g = R_g ∘ C ∘ P
+`P` is the history-level perception operator. Streaming implementations may emit individual records and retain their history; comprehension may maintain a recursive state instead of recomputing from history. These interfaces impose no full-history storage requirement.
 
----
+The reference formulation makes comprehension uncertainty explicit. A point estimate can be encoded as a Dirac measure `δ_s`, assigning probability one to `s`. This encoding does not establish that a point estimator is certain or correct.
 
-## 3. Perception
+## 4. State Abstraction and Belief Projection
 
-- P  
-  Perception operator.
+`R_g` consumes a belief. Its output may be a distribution, scalar, vector, category, or structured record; `U_g` specifies which.
 
-- Z  
-  Space of detected semantic concepts.
+For a measurable state abstraction `φ_g : S → V_g`, a distribution-valued projection is:
 
-The perception operator is defined as:
+```text
+U_g = Prob(V_g)
+R_g(b)(A) = b(φ_g⁻¹(A))
+```
 
-    P : Y^{≤t} → Z
+for measurable `A ⊆ V_g`. Here, `φ_g⁻¹(A)` is the set of situations mapped into `A`. This construction is the pushforward of `b`: probabilities of merged states are added, without reweighting according to preference.
 
-Perception transforms raw observations into semantic concepts.
+A summary such as expected severity instead uses:
 
----
+```text
+U_g ⊆ ℝ
+R_g(b) = ∫ ℓ_g(s) b(ds)
+```
 
-## 4. Comprehension
+where `ℓ_g` is a specified severity function integrable under the input belief `b`. This score is not automatically a probability.
 
-- C  
-  Comprehension operator.
+## 5. Goals and Responsibilities
 
-- S  
-  Internal situation space produced by comprehension.
+The goal `g` specifies relevance and parameterizes `R_g`. In this reference architecture, `P` and `C` are held fixed across goals. Goal locality is a design assumption, not a universal property of sensing and inference.
 
-- P(S)  
-  Belief or uncertainty distribution over situation states.
+- `P`: what has been detected?
+- `C`: what situation might be occurring?
+- `R_g`: which representation matters for this goal?
 
-The comprehension operator is defined as:
-
-    C : Z^{≤t} → S
-
-or, when uncertainty is represented explicitly:
-
-    C : Z^{≤t} → P(S)
-
----
-
-## 5. Projection
-
-- R_g  
-  Projection operator parameterized by goal g.
-
-- φ_g  
-  Goal-conditioned projection function.
-
-- U_g  
-  Goal-relevant situation representation space.
-
-U_g is a representation space determined by the goal and is generally not a subset of S. Its elements may represent abstractions such as categories, margins, scores, or modes.
-
-The projection operator is defined as:
-
-    R_g : S → U_g
-
-Equivalently:
-
-    φ_g : S → U_g
-
-with:
-
-    R_g(s) = φ_g(s)
-
----
-
-## 6. Goals
-
-- g  
-  Goal or operational context parameter.
-
-A goal specifies relevance rather than behavior. It determines how the internal situation representation is reduced by the projection operator. A goal may correspond to a safety objective, optimization objective, operational mode, diagnostic intent, or responsibility constraint.
-
----
-
-## 7. Operator Responsibilities (Summary)
-
-- P (Perception): determines what is detected
-- C (Comprehension): determines what situation is believed
-- R_g (Projection): determines what aspects of the situation are relevant under goal g
-
----
-
-## 8. General Conventions
-
-- Uppercase symbols denote spaces or operators.
-- Lowercase symbols denote elements of spaces.
-- Subscript g denotes parameterization by goal, not subsetting.
-- Composition is written using the ∘ symbol.
-- No assumptions are made about implementation, algorithms, or control strategies unless explicitly stated.
-
----
-
-## 9. Scope of Notation
-
-This notation is scoped to the situation awareness framework only. It deliberately avoids symbols related to control, planning, optimization, or learning, which are considered downstream concerns.
-
----
-
-## 10. Summary
-
-This document defines the minimal notation required to describe the Situation Awareness framework consistently. It serves as a shared reference for all other documents in the repository and is intended to remain stable as the framework evolves.
+Action selection remains downstream. Here, *projection* means goal-conditioned representation, not necessarily prediction of future states.
