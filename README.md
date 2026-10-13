@@ -1,100 +1,107 @@
 # Situation Awareness Operator
 
-A structured framework for defining and analyzing situation awareness in engineered systems.
+A framework for defining and analyzing goal-relevant representations in engineered systems.
 
-## Quick start
+## Core Idea
 
-This repository defines situation awareness as a goal-conditioned transformation from observations to a goal-relevant internal representation:
+Situation awareness is defined as:
 
+```text
 SA_g = R_g ∘ C ∘ P
+```
 
-Where:
+The operators have distinct responsibilities:
 
-- P = Perception: transforms raw observations into semantic concepts
-- C = Comprehension: integrates concepts into an internal situation model
-- R_g = Projection: reduces that model to a goal-relevant representation
+- **Perception `P`:** detects semantic concepts from observations.
+- **Comprehension `C`:** constructs a belief over internal situations.
+- **Projection `R_g`:** exposes a representation relevant to a specified goal.
 
-The framework is intended to make implicit abstraction steps explicit, so systems can be compared, analyzed, and audited more clearly.
+The canonical interfaces are:
 
-## Why this repository exists
+```text
+P    : Y^{≤t} → Z^{≤t}
+C    : Z^{≤t} → Prob(S)
+R_g  : Prob(S) → U_g
+SA_g : Y^{≤t} → U_g
+```
 
-Situation awareness is often discussed informally, but it is rarely defined with enough precision to support system design and analysis. This repository addresses that gap by separating three distinct functions:
+Comprehension produces a belief. Projection may expose a distribution, probability, score, margin, category, bound, or structured record.
 
-1. What is detected?
-2. What situation is believed to exist?
-3. What matters given the goal?
+## Why Separate These Responsibilities?
 
-This separation helps distinguish sensing failures, explanation failures, and relevance failures.
+The separation makes three questions explicit:
 
-## What this framework is
+1. What was detected?
+2. What situations does the evidence support?
+3. Which representation does the consumer need?
 
-- a representational architecture for SA
-- a conceptual tool for system analysis
-- a way to reason about goals, abstraction, and relevance
-- a basis for comparing design alternatives
+It helps distinguish detection errors, inference errors, projection inadequacy, and downstream misuse.
 
-## What this framework is not
+The decomposition is functional. It does not require three separate software modules or exclude learned implementations.
 
-- not a control algorithm
-- not a planning method
-- not a model of human cognition
-- not a substitute for domain-specific safety analysis
+## Important Assumptions
 
-## Core documents
+In the reference architecture, perception and comprehension are held fixed across goals. Goal dependence is localized to projection.
 
-This repo is organized around a small set of documents:
+This is a design assumption. Goal-dependent sensing or inference requires an extension.
 
-- README.md — high-level overview and navigation
-- sa_operator.md — formal operator definition
-- design_principle.md — rationale and design principles
-- analysis_guidelines.md — how to analyze a real system with this framework
-- notations.md — notation and naming conventions
-- limitations.md — scope and intentional boundaries
-- perception_operator.md — perception operator specification
-- comprehension_operator.md — comprehension operator specification
-- projection_operator.md — projection operator specification
-- projection_patterns.md — common projection patterns
-- sa_architecture_and_sw_2_0.md — broader architectural framing
+Projection does not change underlying belief probabilities because an outcome is severe or desirable. Consequence-weighted quantities are scores, not updated beliefs.
 
-## Repository map
+Here, projection means representation according to relevance, not necessarily forecasting.
 
-- Overview and theory
-  - README.md
-  - sa_operator.md
-  - design_principle.md
-- Formal specification
-  - perception_operator.md
-  - comprehension_operator.md
-  - projection_operator.md
-  - notations.md
-- Analysis and use
-  - analysis_guidelines.md
-  - projection_patterns.md
-  - sa_architecture_and_sw_2_0.md
-- Boundaries and scope
-  - limitations.md
+## Minimal Example
 
-## Typical analysis flow
+Suppose comprehension produces:
 
-When applying this framework to a system, the usual steps are:
+```text
+normal                   0.60
+overheating_without_fire  0.30
+fire_present             0.10
+```
 
-1. Identify the observation inputs
-2. Identify the perception outputs
-3. Identify the internal situation model
-4. Identify the projection boundary
-5. Describe the goal-conditioned representation
-6. Check whether downstream components are using the projected representation correctly
+A safety projection can expose:
 
-## Suggested next reading order
+```text
+Pr(fire) = 0.10
+```
 
-For a first-time reader:
+An equipment-condition projection can expose:
 
-1. README.md
-2. sa_operator.md
-3. design_principle.md
-4. analysis_guidelines.md
-5. projection_operator.md
+```text
+Pr(abnormal) = 0.40
+```
 
-## Summary
+Both derive from the same belief. They preserve different distinctions for different consumers.
 
-This repository is a conceptual specification for situation awareness as a structured system capability. Its main value is in making the representation pipeline explicit, inspectable, and reusable across system designs.
+A downstream policy decides what action to take.
+
+## Documents
+
+| Document | Purpose |
+| --- | --- |
+| [sa_operator.md](sa_operator.md) | Framework definition and worked example |
+| [notations.md](notations.md) | Shared spaces, symbols, and interfaces |
+| [perception_operator.md](perception_operator.md) | Semantic detection contract |
+| [comprehension_operator.md](comprehension_operator.md) | Situation belief contract |
+| [projection_operator.md](projection_operator.md) | Goal-relevant representation contract |
+| [projection_patterns.md](projection_patterns.md) | Recurring projection designs |
+| [design_principle.md](design_principle.md) | Architectural rationale |
+| [analysis_guidelines.md](analysis_guidelines.md) | Practical system review |
+| [sa_architecture_and_sw_2_0.md](sa_architecture_and_sw_2_0.md) | Explicit interfaces and end-to-end learning |
+| [limitations.md](limitations.md) | Assumptions and boundaries |
+
+## Suggested Reading Order
+
+1. [sa_operator.md](sa_operator.md)
+2. [notations.md](notations.md)
+3. The three operator specifications
+4. [projection_patterns.md](projection_patterns.md)
+5. [analysis_guidelines.md](analysis_guidelines.md)
+
+## Scope
+
+This is a representational architecture and analysis framework.
+
+It does not select actions, prescribe inference algorithms, guarantee calibration or safety, or model human cognition.
+
+Its practical value depends on explicit contracts and evidence that the resulting representations support their intended consumers.
