@@ -68,8 +68,8 @@ For this example, comprehension summarizes the concept history using `E`. It doe
 
 Specify priors and joint evidence likelihoods:
 
-| State `s` | Prior `p(s)` | Likelihood `p(E | s)` |
-| --- | --- | --- |
+| State `s` | Prior `p(s)` | Likelihood `p(E \| s)` |
+| --- | ---: | ---: |
 | Neither | 0.60 | 0.05 |
 | Network only | 0.20 | 0.40 |
 | Worker only | 0.10 | 0.80 |
